@@ -1,0 +1,117 @@
+---
+word_document: default
+author: "Zulay Attanasio"
+mainfont: Times New Roman
+output: word_document
+fontsize: 11pt
+title: "World Bank Data Analysis Exercise"
+---
+
+
+```{r,warning=FALSE,message=FALSE,include=FALSE, eval=FALSE}
+
+# 0. Set-Up:Downloading packages
+# INSTRUCTIONS: Before using the function Knit to get the word document with results, please make sure that the following packages are installed properly in your local machine.
+
+install.packages('WDI')
+install.packages('ggplot2')
+install.packages('tidyverse')
+install.packages('dplyr')
+install.packages('knitr')
+knitr::opts_chunk$set(echo = FALSE)
+```
+```{r,warning=FALSE,message=FALSE,include=FALSE}
+library(WDI)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+**Dataset Description**
+
+The indicator *Life expectancy at birth total (years)*, indicates the number of years a newborn infant would live if prevailing patterns of mortality at the time of its birth were to stay the same throughout its life.The dataset is sized 12470 rows *11 columns containing the indicator information in different regions around the world since 1960. The dataset also contains variables such as country and income by categories (low, middle and high income).
+
+```{r,warning=FALSE,message=FALSE,include=FALSE}
+
+  # 1. Getting the & cleaning the dataset
+
+data<- WDI(indicator = c("SP.DYN.LE00.IN"), start = 1960, end = 2017, extra = TRUE) 
+data<- subset(data, region != "Aggregates")
+data<-na.omit(data) 
+colnames(data)[which(colnames(data) == "SP.DYN.LE00.IN")] <- "Life_Expectancy"
+```
+
+```{r,warning=FALSE,message=FALSE,include=FALSE}
+
+# 2. Dataset Manipulation 
+
+# Manipulating the dataset to obtain the variables and a desirable form to create a high-quality graph. Two subsets by region will be created: Sub-Saharan Africa & Latin America & Caribbean. In addition, in consideration of the space limitation, I will select a specific year.
+
+data_SSC<-subset(data,region=="Sub-Saharan Africa")
+data_SSC<- subset(data_SSC,year == '2017', select = c("country","Life_Expectancy","income"))
+data_LAC<-subset(data,region=="Latin America & Caribbean")
+data_LAC<- subset(data_LAC,year == '2017', select = c("country","Life_Expectancy","income"))
+```
+
+
+```{r,warning=FALSE,message=FALSE,include=FALSE}
+
+# 3. Choosing one aspect or trend of the dataset 
+
+# I want to know what is the life expectancy in years by income in those regions. Is it true that people with a higher-income have a higher life expectancy? Here, the datasets are grouped by "income" and the average of the life expectancy is calculated. The outputs generated are merged into one. The latest dataset will be manipulated for convenience to create the graph.
+
+data_LAC<-data_LAC%>%
+  group_by(income)%>%
+  summarise(LAC= mean(Life_Expectancy))
+data_SSC<-data_SSC%>%
+  group_by(income)%>%
+  summarise(SSC = mean(Life_Expectancy))
+dataset<- merge(data_LAC, data_SSC, all.x = TRUE, ordered = FALSE)
+tibble <- as_tibble(dataset)
+tidyTib <- gather(tibble,'LAC':'SSC',
+                  key = 'Life_Expectancy',factor_key = TRUE,value = 'Average')
+```
+
+```{r,warning=FALSE,message=FALSE,include=FALSE}
+
+# 4. Generating parameters for a high quality Graph
+
+hw <- theme_gray()+ theme(
+  plot.title=element_text(hjust=0.5),
+  plot.subtitle=element_text(hjust=0.5),
+  plot.caption=element_text(hjust=-.5),
+  #  strip.text.y = element_blank(),
+  strip.background=element_rect(fill=rgb(.9,.95,1),
+                                colour=gray(.5), size=.2),
+  panel.border=element_rect(fill=FALSE,colour=gray(.70)),
+  panel.grid.minor.y = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.spacing.x = unit(0.050,"cm"),
+  panel.spacing.y = unit(0.050,"cm"),
+  # axis.ticks.y= element_blank()
+  axis.ticks=element_blank(),
+  axis.text=element_text(colour="black"),
+  axis.text.y=element_text(margin=margin(0,3,0,3)),
+  axis.text.x=element_text(margin=margin(-1,0,3,0))
+)
+```
+
+## Graph and Analysis Section
+
+```{r fig.width=8.2,fig.height=4, fig.cap= "Figure:1 Each point on the plot represents the average life expectancy at birth in years by income. The horizontal axis gives the mean of the life expectancy at birth for Latin America & Caribbean and Sub-Saharan Africa regions."}
+ggplot(tidyTib, aes(y = reorder(income,-Average),x = Average, as.tables=TRUE)) +
+  geom_point(shape = 21, size = 2.7,  
+             fill = 'cyan',color = 'black') +
+  facet_grid(.~Life_Expectancy) + hw +
+  labs(x ='Average Life Expectancy at Birth (years)', y='',title = 'Average Life Expectancy at Birth by Income in the
+      \nLatin America & Caribbean (LAC) and Sub-Saharan Africa (SSC) Regions: 2017')
+```
+
+
+
+**Analysis**
+
+
+Observing the results, it can be concluded that the average life expectancy at birth for population lying in low incomes in the Latin America & Caribbean (LAC) and Sub-Saharan Africa (SSC) Regions is about 65 years; as long as the prevailing patterns of mortality at the time of their births were to stay the same throughout their life. Similarly, the population lying in higher incomes has a higher average life expectancy at birth with about 75 years (77.5 years for LAC population and 74.3 years for SSC population). It is important to highlight that there is a wide variation in the average life expectancy in years among the LAC and SSC's population lying in the Lower middle and Upper middle incomes. While the LAC population lying in the Lower middle and Upper middle incomes has about 73 to 74 years of average life expectancy at birth, the SSC population lying in the Lower middle and Upper middle incomes have about 62 to 65 years of average life expectancy at birth.
+
